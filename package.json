@@ -1,0 +1,29 @@
+{
+  "name": "stayhydratedtwitchbot",
+  "version": "1.0.0",
+  "description": "A Twitch bot that helps you to maintain optimal hydration",
+  "main": "index.js",
+  "dependencies": {
+    "dotenv": "^8.2.0",
+    "tmi.js": "^1.5.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.4"
+  },
+  "scripts": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Vuurvos1/stayhydratedTwitchBot.git"
+  },
+  "keywords": [
+    "hydration"
+  ],
+  "author": "Vuurvos1",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Vuurvos1/stayhydratedTwitchBot/issues"
+  },
+  "homepage": "https://github.com/Vuurvos1/stayhydratedTwitchBot#readme"
+}
