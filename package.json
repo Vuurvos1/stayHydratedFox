@@ -5,7 +5,9 @@
   "main": "index.js",
   "dependencies": {
     "dotenv": "^8.2.0",
-    "tmi.js": "^1.5.0"
+    "tmi.js": "^1.5.0",
+    "twitch-api-v5": "^2.0.4",
+    "xmlhttprequest": "^1.8.0"
   },
   "devDependencies": {
     "nodemon": "^2.0.4"
