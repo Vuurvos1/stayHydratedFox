@@ -1,6 +1,5 @@
 const tmi = require('tmi.js');
 const api = require('twitch-api-v5');
-// const https = require('https');
 require('dotenv').config();
 
 api.clientID = process.env.TW_CLIENT_ID;
@@ -11,7 +10,7 @@ const opts = {
     username: process.env.TW_USERNAME,
     password: process.env.TW_OAUTH,
   },
-  channels: ['Firefox__', 'Wilbo__', 'adamantlte'],
+  channels: ['Firefox__', 'Wilbo__', 'adamantlte', 'baister09'],
 };
 // Create a client with our options
 const client = new tmi.client(opts);
@@ -43,11 +42,7 @@ async function onMessageHandler(target, context, msg, self) {
   } else if (commandName === '!hydrate') {
     const hydration = await hydrate(target);
     console.log(hydration);
-    client.say(
-      target,
-      `${hydration}`
-      //   `Make sure to drink enough water to maintain optimun hydration! 💦`
-    );
+    client.say(target, `${hydration}`);
   } else {
     console.log(`* Unknown command ${commandName}`);
   }
@@ -86,22 +81,12 @@ async function hydrate(user) {
   let streamTime2 = streamTime;
   console.log(streamTime2);
 
-  let hydrationAmountSec = 43.2;
   // 2 ml a minute
   let hydrationAmountMin = 2;
 
   streamTime = convertMS(streamTime);
 
   let liveTime = '';
-
-  //   if (streamTime.day != 0) {
-  //     liveTime = `${streamTime.day} days `;
-  //   } else if (streamTime.hour != 0) {
-  //     liveTime = `${streamTime.hour} hours `;
-  //   } else if (streamTime.minute != 0) {
-  //     liveTime = `${streamTime.minute} minutes `;
-  //   }
-
   let hours = streamTime.day * 12 + streamTime.hour;
   let min = streamTime.minute;
 
@@ -119,10 +104,15 @@ async function hydrate(user) {
 
   console.log(liveTime);
 
-  //   let water = Math.floor(hydrationAmountSec * (streamTime2 / 1000));
   let water = Math.floor(hydrationAmountMin * (streamTime2 / 1000 / 60));
+  if (water >= 1000) {
+    water = Math.round((water / 1000) * 10) / 10;
+    water = `${water} L`;
+  } else {
+    water = `${water} mL `;
+  }
 
-  return `You have been live for more than ${liveTime}and you should have consumed at least ${water} ml of water to maintain optimal hydration!`;
+  return `You have been live for more than ${liveTime}and you should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
 }
 
 // Called every time the bot connects to Twitch chat
@@ -144,7 +134,6 @@ async function getUserId(userName) {
       if (err) {
         console.log(err);
       } else {
-        // console.log(res);
         resolve(res);
       }
     });
@@ -159,7 +148,6 @@ async function getUptime(id) {
       if (err) {
         console.log(err);
       } else {
-        // console.log(res);
         resolve(res);
       }
     });
