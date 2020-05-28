@@ -4,13 +4,48 @@ require('dotenv').config();
 
 api.clientID = process.env.TW_CLIENT_ID;
 
+const usernames = [
+  'Firefox__',
+  'Wilbo__',
+  'bueffel213',
+  'adamantlte',
+  'lucinovic14',
+  'baister09',
+  'doubledubbel',
+  'riekelt',
+  'rdvvstheworld',
+  // 'msushi100',
+  // 'canteven',
+];
+
+// Store user ids
+const userIdList = {};
+let userIdArr = [];
+
+api.users.usersByName({ users: usernames }, (err, res) => {
+  if (err) {
+    console.log(err);
+  } else {
+    console.log(`found ${res._total} channels`);
+    for (let i of res.users) {
+      userIdList[i.name] = i._id;
+    }
+  }
+  console.log(userIdList);
+
+  userIdArr = Object.values(userIdList);
+  console.log(userIdArr);
+
+  pingStreamUp();
+});
+
 // Define configuration options
 const opts = {
   identity: {
     username: process.env.TW_USERNAME,
     password: process.env.TW_OAUTH,
   },
-  channels: ['Firefox__', 'Wilbo__', 'adamantlte', 'baister09'],
+  channels: usernames,
 };
 // Create a client with our options
 const client = new tmi.client(opts);
@@ -28,8 +63,7 @@ async function onMessageHandler(target, context, msg, self) {
     return;
   } // Ignore messages from the bot
 
-  //   console.log(msg);
-  //   console.log(target);
+  console.log(target);
 
   // Remove whitespace from chat message
   const commandName = msg.trim();
@@ -43,8 +77,9 @@ async function onMessageHandler(target, context, msg, self) {
     const hydration = await hydrate(target);
     console.log(hydration);
     client.say(target, `${hydration}`);
+    console.log(`* Executed ${commandName} command`);
   } else {
-    console.log(`* Unknown command ${commandName}`);
+    // console.log(`* Unknown command ${commandName}`);
   }
 }
 // Function called when the "dice" command is issued
@@ -54,14 +89,9 @@ function rollDice() {
 }
 
 async function hydrate(user) {
-  let str = user.slice(1);
+  let str = user.slice(1).toLowerCase();
   console.log(str);
-
-  let x = await getUserId(str);
-  console.log(x);
-  x = x.users[0]._id;
-  console.log(x);
-  let y = await getUptime(x);
+  let y = await getUptime(userIdList[str]);
   console.log(y);
   console.log(y.stream);
 
@@ -75,7 +105,7 @@ async function hydrate(user) {
 
   // console.log(res);
   let timeStart = new Date(y.stream.created_at);
-  //   console.log(timeStart);
+  // console.log(timeStart);
 
   let streamTime = Math.floor(dateUTC - timeStart);
   let streamTime2 = streamTime;
@@ -107,12 +137,12 @@ async function hydrate(user) {
   let water = Math.floor(hydrationAmountMin * (streamTime2 / 1000 / 60));
   if (water >= 1000) {
     water = Math.round((water / 1000) * 10) / 10;
-    water = `${water} L`;
+    water = `${water} L `;
   } else {
     water = `${water} mL `;
   }
 
-  return `You have been live for more than ${liveTime}and you should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
+  return `You have been live for ${liveTime}and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
 }
 
 // Called every time the bot connects to Twitch chat
@@ -120,26 +150,64 @@ function onConnectedHandler(addr, port) {
   console.log(`* Connected to ${addr}:${port}`);
 }
 
-// code loop
-const minutes = 5,
-  the_interval = minutes * 60 * 1000;
-setInterval(function () {
-  console.log('I am doing my 5 minutes check');
-  // do your stuff here
-}, the_interval);
+// const userIdArr = Object.values(userIdList);
+// console.log(userIdArr);
 
-async function getUserId(userName) {
-  let promise = new Promise(function (resolve, reject) {
-    api.users.usersByName({ users: userName }, (err, res) => {
-      if (err) {
-        console.log(err);
-      } else {
-        resolve(res);
+// ping all streams
+function pingStreamUp() {
+  api.streams.live({ channel: userIdArr.join() }, (err, res) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log(res);
+
+      for (let i of res.streams) {
+        let dateUTC = new Date();
+        dateUTC.getUTCDate();
+        // console.log(dateUTC);
+
+        // console.log(res);
+        let timeStart = new Date(i.created_at);
+        // console.log(timeStart);
+
+        let streamTime = Math.floor(dateUTC - timeStart);
+        // let streamTime2 = streamTime;
+        console.log(streamTime);
+        const hourMs = 1000 * 60 * 60;
+
+        let timeTilReminder = hourMs - (streamTime % hourMs);
+        let hoursLive = Math.ceil(streamTime / hourMs);
+
+        console.log(
+          `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
+        );
+
+        setTimeout(() => {
+          console.log(
+            `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
+          );
+          sendReminder(timeTilReminder, i.channel.name, hoursLive);
+        }, timeTilReminder);
+        // setTimeout(() => {
+        //   sendReminder(timeTilReminder, i.channel.name, hoursLive);
+        // }, 5000);
       }
-    });
+    }
   });
+}
 
-  return promise;
+// pingStreamUp();
+
+function sendReminder(time, userName, hours) {
+  //send msg
+  console.log(
+    `sendReminder: time ${time}, userName ${userName}, hours ${hours}`
+  );
+
+  let water = hours * 120;
+  console.log(`send reminder to ${userName}`);
+  let x = `You have been live for ${hours}and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
+  client.say(userName, x);
 }
 
 async function getUptime(id) {
@@ -157,7 +225,7 @@ async function getUptime(id) {
 }
 
 function convertMS(milliseconds) {
-  var day, hour, minute, seconds;
+  let day, hour, minute, seconds;
   seconds = Math.floor(milliseconds / 1000);
   minute = Math.floor(seconds / 60);
   seconds = seconds % 60;
@@ -172,3 +240,18 @@ function convertMS(milliseconds) {
     seconds: seconds,
   };
 }
+
+// add water/hydrate fact command?
+
+// code loop
+const minutes = 5,
+  the_interval = minutes * 60 * 1000;
+setInterval(function () {
+  console.log('I am doing my 5 minutes check');
+  // do your stuff here
+
+  // pingStreamUp();
+
+  // set timouts if if statement
+  // should contain stream id and if statement if still live
+}, the_interval);
