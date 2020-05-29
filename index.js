@@ -7,13 +7,14 @@ api.clientID = process.env.TW_CLIENT_ID;
 const usernames = [
   'Firefox__',
   'Wilbo__',
-  'bueffel213',
+  'riekelt',
   'adamantlte',
-  'lucinovic14',
+  'bakenwake42',
+  'bueffel213',
   'baister09',
   'doubledubbel',
-  'riekelt',
   'rdvvstheworld',
+  'lucinovic14',
   // 'msushi100',
   // 'canteven',
 ];
@@ -21,6 +22,8 @@ const usernames = [
 // Store user ids
 const userIdList = {};
 let userIdArr = [];
+let liveChannels = [];
+let msgQueue = [];
 
 api.users.usersByName({ users: usernames }, (err, res) => {
   if (err) {
@@ -63,8 +66,6 @@ async function onMessageHandler(target, context, msg, self) {
     return;
   } // Ignore messages from the bot
 
-  // console.log(target);
-
   // Remove whitespace from chat message
   const commandName = msg.trim();
 
@@ -75,7 +76,6 @@ async function onMessageHandler(target, context, msg, self) {
     console.log(`* Executed ${commandName} command`);
   } else if (commandName === '!hydrate') {
     const hydration = await hydrate(target);
-    console.log(hydration);
     client.say(target, `${hydration}`);
     console.log(`* Executed ${commandName} command`);
   } else {
@@ -103,9 +103,7 @@ async function hydrate(user) {
   dateUTC.getUTCDate();
   console.log(dateUTC);
 
-  // console.log(res);
   let timeStart = new Date(y.stream.created_at);
-  // console.log(timeStart);
 
   let streamTime = Math.floor(dateUTC - timeStart);
   let streamTime2 = streamTime;
@@ -137,12 +135,12 @@ async function hydrate(user) {
   let water = Math.floor(hydrationAmountMin * (streamTime2 / 1000 / 60));
   if (water >= 1000) {
     water = Math.round((water / 1000) * 10) / 10;
-    water = `${water} L `;
+    water = `${water} L`;
   } else {
-    water = `${water} mL `;
+    water = `${water} mL`;
   }
 
-  return `You have been live for ${liveTime}and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
+  return `You have been live for ${liveTime} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
 }
 
 // Called every time the bot connects to Twitch chat
@@ -159,7 +157,8 @@ function pingStreamUp() {
     if (err) {
       console.log(err);
     } else {
-      console.log(res);
+      // console.log(res);
+      liveChannels = [];
 
       for (let i of res.streams) {
         let dateUTC = new Date();
@@ -178,41 +177,63 @@ function pingStreamUp() {
         let timeTilReminder = hourMs - (streamTime % hourMs);
         let hoursLive = Math.ceil(streamTime / hourMs);
 
-        console.log(
-          `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
-        );
+        liveChannels.push(i.channel.name);
 
-        setTimeout(() => {
+        if (!msgQueue.includes(i.channel.name)) {
+          msgQueue.push(i.channel.name);
           console.log(
             `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
           );
-          sendReminder(timeTilReminder, i.channel.name, hoursLive);
-        }, timeTilReminder);
-        // setTimeout(() => {
-        //   sendReminder(timeTilReminder, i.channel.name, hoursLive);
-        // }, 5000);
+
+          setTimeout(() => {
+            console.log(
+              `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
+            );
+            sendReminder(timeTilReminder, i.channel.name, hoursLive);
+          }, timeTilReminder);
+        }
       }
+
+      console.log(`liveChannels contains: ${liveChannels}`);
     }
   });
 }
 
-// pingStreamUp();
-
 function sendReminder(time, userName, hours) {
   //send msg
-  console.log(
-    `sendReminder: time ${time}, userName ${userName}, hours ${hours}`
-  );
+  if (liveChannels.includes(userName)) {
+    // remove from arrays queue
+    let index = liveChannels.indexOf(userName);
+    if (index > -1) {
+      liveChannels.splice(index, 1);
+    }
 
-  let water = hours * 120;
-  if (hours === 1) {
-    hours = `${hours} hour`;
-  } else {
-    hours = `${hours} hours`;
+    console.log(
+      `liveChannel after reminder send to ${userName}: ${liveChannels}`
+    );
+
+    console.log(
+      `sendReminder: time ${time}, userName ${userName}, hours ${hours}`
+    );
+
+    let water = hours * 120;
+    if (hours === 1) {
+      hours = `${hours} hour`;
+    } else {
+      hours = `${hours} hours`;
+    }
+
+    if (water >= 1000) {
+      water = Math.round((water / 1000) * 10) / 10;
+      water = `${water} L`;
+    } else {
+      water = `${water} mL`;
+    }
+
+    console.log(`send reminder to ${userName}`);
+    let x = `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
+    client.say(userName, x);
   }
-  console.log(`send reminder to ${userName}`);
-  let x = `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
-  client.say(userName, x);
 }
 
 async function getUptime(id) {
@@ -246,17 +267,14 @@ function convertMS(milliseconds) {
   };
 }
 
-// add water/hydrate fact command?
-
 // code loop
 const minutes = 5,
-  the_interval = minutes * 60 * 1000;
+  interval = minutes * 60000;
 setInterval(function () {
   console.log('I am doing my 5 minutes check');
   // do your stuff here
 
-  // pingStreamUp();
+  pingStreamUp();
+}, interval);
 
-  // set timouts if if statement
-  // should contain stream id and if statement if still live
-}, the_interval);
+// add water/hydrate fact command?
