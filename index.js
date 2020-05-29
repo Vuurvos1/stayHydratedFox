@@ -63,7 +63,7 @@ async function onMessageHandler(target, context, msg, self) {
     return;
   } // Ignore messages from the bot
 
-  console.log(target);
+  // console.log(target);
 
   // Remove whitespace from chat message
   const commandName = msg.trim();
@@ -205,8 +205,13 @@ function sendReminder(time, userName, hours) {
   );
 
   let water = hours * 120;
+  if (hours === 1) {
+    hours = `${hours} hour`;
+  } else {
+    hours = `${hours} hours`;
+  }
   console.log(`send reminder to ${userName}`);
-  let x = `You have been live for ${hours}and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
+  let x = `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
   client.say(userName, x);
 }
 
