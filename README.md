@@ -20,11 +20,12 @@ TW_PASSWORD=botPassword
 TW_OAUTH=oauth:oathCode
 TW_CLIENT_ID=clientId
 SECRET=secretClienCode
+TW_CHANNELS=channelname1,channelname2,channelname3
 ```
 
 5. Start the project using `node index`
 6. Your hydration bot should now be up and running 💦!
 
-## Future Features
+## Possible Future Features
 
 Hydration fact command

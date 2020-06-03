@@ -3,22 +3,7 @@ const api = require('twitch-api-v5');
 require('dotenv').config();
 
 api.clientID = process.env.TW_CLIENT_ID;
-
-const usernames = [
-  'Wilbo__',
-  'riekelt',
-  'adamantlte',
-  'bakenwake42',
-  'reeverm',
-  'baister09',
-  'Firefox__',
-  'doubledubbel',
-  'rdvvstheworld',
-  'bueffel213',
-  'lucinovic14',
-  // 'msushi100',
-  // 'canteven',
-];
+const usernames = process.env.TW_CHANNELS.split(',');
 
 // Store user ids
 const userIdList = {};
@@ -80,10 +65,7 @@ async function onMessageHandler(target, context, msg, self) {
 
 async function hydrate(user) {
   let str = user.slice(1).toLowerCase();
-  console.log(str);
   let y = await getUptime(userIdList[str]);
-  console.log(y);
-  console.log(y.stream);
 
   if (y.stream == null) {
     return `Yikes this streamer ain't live, but you should still stay hydrated!`;
@@ -91,13 +73,11 @@ async function hydrate(user) {
 
   let dateUTC = new Date();
   dateUTC.getUTCDate();
-  console.log(dateUTC);
 
   let timeStart = new Date(y.stream.created_at);
 
   let streamTime = Math.floor(dateUTC - timeStart);
   let streamTime2 = streamTime;
-  console.log(streamTime2);
 
   // 2 ml a minute
   let hydrationAmountMin = 2;
@@ -119,8 +99,6 @@ async function hydrate(user) {
   } else if (min != 0) {
     liveTime += `${min} minutes `;
   }
-
-  console.log(liveTime);
 
   let water = Math.floor(hydrationAmountMin * (streamTime2 / 1000 / 60));
   if (water >= 1000) {
@@ -161,7 +139,9 @@ function pingStreamUp() {
         if (!msgQueue.includes(i.channel.name)) {
           msgQueue.push(i.channel.name);
           console.log(
-            `sending reminder to ${i.channel.name} in ${timeTilReminder} ms, ${hoursLive} hour live`
+            `sending reminder to ${i.channel.name} in ${
+              timeTilReminder / 60000
+            } min, ${hoursLive} hour live`
           );
 
           setTimeout(() => {
@@ -171,7 +151,6 @@ function pingStreamUp() {
       }
 
       console.log(`Currently live channels: ${liveChannels.join(', ')}`);
-      console.log(`msgQueue constain: ${msgQueue}`);
     }
   });
 }
@@ -183,15 +162,11 @@ function sendReminder(time, userName, hours) {
     let index = liveChannels.indexOf(userName);
     if (index > -1) {
       liveChannels.splice(index, 1);
-      console.log(
-        `removed ${userName} from liveChannels, liveChannels: ${liveChannels}`
-      );
     }
 
     let index2 = msgQueue.indexOf(userName);
     if (index2 > -1) {
       msgQueue.splice(index2, 1);
-      console.log(`removed ${userName} from msgQueue, msgQueue: ${msgQueue}`);
     }
 
     let water = hours * 120;
@@ -208,9 +183,11 @@ function sendReminder(time, userName, hours) {
       water = `${water} mL`;
     }
 
-    console.log(`send reminder to ${userName} who has been live for ${hours}`);
-    let x = `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`;
-    client.say(userName, x);
+    console.log(`Send reminder to ${userName} who has been live for ${hours}`);
+    client.say(
+      userName,
+      `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`
+    );
   }
 }
 
@@ -248,7 +225,7 @@ function convertMS(milliseconds) {
 // code loop
 const interval = 5 * 60000; // 5 min
 setInterval(function () {
-  console.log('5 minute up check');
+  console.log('5 min check');
   pingStreamUp();
 }, interval);
 
