@@ -13,7 +13,8 @@
     "nodemon": "^2.0.4"
   },
   "scripts": {
-    "test": "test"
+    "test": "test",
+    "start": "node index.js"
   },
   "repository": {
     "type": "git",
