@@ -102,7 +102,7 @@ async function pingStreamUp() {
           }
         }
 
-        console.log(`Currently live channels: ${liveChannels.join(', ')}`);
+        console.log(`Currently live: ${liveChannels.join(', ')}`);
       } else {
         console.log(err);
       }
@@ -113,7 +113,6 @@ async function pingStreamUp() {
 }
 
 function sendReminder(userName, hours) {
-  //send msg
   if (liveChannels.includes(userName)) {
     // remove from message queue
     const x = msgQueue.indexOf(userName);
@@ -121,6 +120,7 @@ function sendReminder(userName, hours) {
       msgQueue.splice(x, 1);
     }
 
+    // Calculate amount
     let water = hours * 120;
     if (hours === 1) {
       hours = `${hours} hour`;
@@ -135,11 +135,12 @@ function sendReminder(userName, hours) {
       water = `${water} mL`;
     }
 
+    // send message to user
     console.log(`Sending reminder to ${userName} who has been live for ${hours}`);
-    // client.say(
-    //   userName,
-    //   `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`
-    // );
+    client.say(
+      userName,
+      `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`
+    );
   }
 }
 
