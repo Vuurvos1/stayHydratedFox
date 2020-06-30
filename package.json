@@ -14,7 +14,8 @@
   },
   "scripts": {
     "test": "test",
-    "start": "node index.js"
+    "start": "node index.js",
+    "dev": "npx nodemon index.js"
   },
   "repository": {
     "type": "git",
