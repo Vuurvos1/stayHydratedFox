@@ -11,23 +11,27 @@ let userIdArr = [];
 
 let liveChannels = [];
 let msgQueue = [];
+const hourMs = 60000 * 60; // ms in a hour
 
-api.users.usersByName({
-  users: usernames
-}, (err, res) => {
-  if (err) {
-    console.log(err);
-  } else {
-    console.log(`found ${res._total} channels`);
-    for (let i of res.users) {
-      userIdList[i.name] = i._id;
+api.users.usersByName(
+  {
+    users: usernames,
+  },
+  (err, res) => {
+    if (err) {
+      console.log(err);
+    } else {
+      console.log(`Found ${res._total} channels`);
+      for (let i of res.users) {
+        userIdList[i.name] = i._id;
+      }
     }
-  }
-  console.log(userIdList);
-  userIdArr = Object.values(userIdList);
+    console.log(userIdList);
+    userIdArr = Object.values(userIdList);
 
-  pingStreamUp();
-});
+    pingStreamUp();
+  }
+);
 
 // Define configuration options
 const opts = {
@@ -49,19 +53,19 @@ client.connect();
 
 // Called every time a message comes in
 async function onMessageHandler(target, context, msg, self) {
+  // enable this is you also want the bot to listen to commands
+  //
+  // Ignore messages from the bot
   // if (self) {
   //   return;
-  // } // Ignore messages from the bot
-
-  // // Remove whitespace from chat message
+  // }
+  //
+  // Remove whitespace from chat message
   // const commandName = msg.trim();
-
-  // // If the command is known, let's execute it
+  //
   // switch (commandName) {
   //   case '!hydrate':
-  //     const hydration = await hydrate(target);
-  //     client.say(target, `${hydration}`);
-  //     console.log(`* Executed ${commandName} command`);
+  //     client.say(target, 'exucuted command');
   //     break;
   // }
 }
@@ -74,39 +78,46 @@ function onConnectedHandler(addr, port) {
 // ping all streams
 async function pingStreamUp() {
   try {
-    api.streams.live({
-      channel: userIdArr.join()
-    }, (err, res) => {
-      if (res) {
-        liveChannels = [];
+    api.streams.live(
+      {
+        channel: userIdArr.join(),
+      },
+      (err, res) => {
+        if (res) {
+          liveChannels = [];
 
-        for (let i of res.streams) {
-          const hourMs = 60000 * 60; // ms in a hour
-          const streamTime = Math.floor(new Date() - new Date(i.created_at));
-          const timeTilReminder = hourMs - (streamTime % hourMs);
-          const hoursLive = Math.ceil(streamTime / hourMs);
+          for (let i of res.streams) {
+            const streamTime = Math.floor(new Date() - new Date(i.created_at));
+            const timeTilReminder = hourMs - (streamTime % hourMs);
+            const hoursLive = Math.ceil(streamTime / hourMs);
 
-          liveChannels.push(i.channel.name);
+            liveChannels.push(i.channel.name);
 
-          if (!msgQueue.includes(i.channel.name)) {
-            msgQueue.push(i.channel.name);
-            console.log(
-              `sending reminder to ${i.channel.name} in ${
-                timeTilReminder / 60000
-              } min, ${hoursLive} hour live`
-            );
+            if (!msgQueue.includes(i.channel.name)) {
+              msgQueue.push(i.channel.name);
+              console.log(
+                `Sending reminder to ${i.channel.name} in ${(
+                  timeTilReminder / 60000
+                ).toFixed(2)} min, ${hoursLive} hour live`
+              );
 
-            setTimeout(() => {
-              sendReminder(i.channel.name, hoursLive);
-            }, timeTilReminder);
+              setTimeout(() => {
+                sendReminder(i.channel.name, hoursLive);
+              }, timeTilReminder);
+            }
           }
-        }
 
-        console.log(`Currently live: ${liveChannels.join(', ')}`);
-      } else {
-        console.log(err);
+          const date = new Date();
+          console.log(
+            `${date.getHours()}:${('0' + date.getMinutes()).slice(
+              -2
+            )} Currently live: ${liveChannels.join(', ')}`
+          );
+        } else {
+          console.log(err);
+        }
       }
-    });
+    );
   } catch (error) {
     console.log(error);
   }
@@ -120,23 +131,14 @@ function sendReminder(userName, hours) {
       msgQueue.splice(x, 1);
     }
 
-    // Calculate amount
+    // Calculate hours and water amount
     let water = hours * 120;
-    if (hours === 1) {
-      hours = `${hours} hour`;
-    } else {
-      hours = `${hours} hours`;
-    }
 
-    if (water >= 1000) {
-      water = Math.round(water / 100) / 10;
-      water = `${water} L`;
-    } else {
-      water = `${water} mL`;
-    }
+    hours = hours == 1 ? `${hours} hour` : `${hours} hours`;
+    water = water >= 1000 ? `${Math.round(water / 100) / 10} L` : `${water} mL`;
 
     // send message to user
-    console.log(`Sending reminder to ${userName} who has been live for ${hours}`);
+    console.log(`Send reminder to ${userName} for ${hours} live`);
     client.say(
       userName,
       `You have been live for ${hours} and should have consumed at least ${water} of water to maintain optimal hydration! 💦`
@@ -147,7 +149,6 @@ function sendReminder(userName, hours) {
 // code loop
 const interval = 5 * 60000; // 5 min
 setInterval(() => {
-  console.log('5 min check');
   pingStreamUp();
 }, interval);
 
