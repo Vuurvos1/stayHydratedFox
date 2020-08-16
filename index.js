@@ -124,13 +124,13 @@ async function pingStreamUp() {
 }
 
 function sendReminder(userName, hours) {
-  if (liveChannels.includes(userName)) {
     // remove from message queue
-    const x = msgQueue.indexOf(userName);
-    if (x > -1) {
-      msgQueue.splice(x, 1);
-    }
+  const x = msgQueue.indexOf(userName);
+  if (x > -1) {
+    msgQueue.splice(x, 1);
+  }
 
+  if (liveChannels.includes(userName)) {
     // Calculate hours and water amount
     let water = hours * 120;
 
