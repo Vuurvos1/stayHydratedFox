@@ -62,12 +62,6 @@ async function onMessageHandler(target, context, msg, self) {
   //
   // Remove whitespace from chat message
   // const commandName = msg.trim();
-  //
-  // switch (commandName) {
-  //   case '!hydrate':
-  //     client.say(target, 'exucuted command');
-  //     break;
-  // }
 }
 
 // Called every time the bot connects to Twitch chat
@@ -124,9 +118,10 @@ async function pingStreamUp() {
 }
 
 function sendReminder(userName, hours) {
-    // remove from message queue
+  // remove from message queue
   const x = msgQueue.indexOf(userName);
   if (x > -1) {
+    // remove user if not in the msgQueue
     msgQueue.splice(x, 1);
   }
 
@@ -134,7 +129,7 @@ function sendReminder(userName, hours) {
     // Calculate hours and water amount
     let water = hours * 120;
 
-    hours = hours == 1 ? `${hours} hour` : `${hours} hours`;
+    hours = `${hours} ${hours == 1 ? 'hour' : 'hours'}`;
     water = water >= 1000 ? `${Math.round(water / 100) / 10} L` : `${water} mL`;
 
     // send message to user
@@ -151,5 +146,3 @@ const interval = 5 * 60000; // 5 min
 setInterval(() => {
   pingStreamUp();
 }, interval);
-
-// add water/hydrate fact command?

@@ -1,11 +1,11 @@
 {
   "name": "stayhydratedtwitchbot",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A Twitch bot that helps you to maintain optimal hydration",
   "main": "index.js",
   "dependencies": {
     "dotenv": "^8.2.0",
-    "tmi.js": "^1.5.0",
+    "tmi.js": "^1.8.5",
     "twitch-api-v5": "^2.0.4"
   },
   "devDependencies": {
