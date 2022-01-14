@@ -100,13 +100,6 @@ async function pingStreamUp() {
               }, timeTilReminder);
             }
           }
-
-          const date = new Date();
-          console.log(
-            `${date.getHours()}:${('0' + date.getMinutes()).slice(
-              -2
-            )} Currently live: ${liveChannels.join(', ')}`
-          );
         } else {
           console.log(err);
         }
