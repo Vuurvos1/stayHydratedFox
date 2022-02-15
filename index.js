@@ -27,7 +27,7 @@ api.users.usersByName(
       }
     }
 
-    if (Object.keys(userIdList).length >= usernames.length) {
+    if (Object.keys(userIdList).length > usernames.length) {
       throw new Error('More usernames where fetched than defined in .env');
     }
 
