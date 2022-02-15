@@ -22,11 +22,15 @@ api.users.usersByName(
       console.log(err);
     } else {
       console.log(`Found ${res._total} channels`);
-      for (let i of res.users) {
-        userIdList[i.name] = i._id;
+      for (let user of res.users) {
+        userIdList[user.name] = user._id;
       }
     }
-    console.log(userIdList);
+
+    if (Object.keys(userIdList).length >= usernames.length) {
+      throw new Error('More usernames where fetched than defined in .env');
+    }
+
     userIdArr = Object.values(userIdList);
 
     pingStreamUp();
@@ -45,24 +49,10 @@ const opts = {
 const client = new tmi.client(opts);
 
 // Register our event handlers (defined below)
-client.on('message', onMessageHandler);
 client.on('connected', onConnectedHandler);
 
 // Connect to Twitch:
 client.connect();
-
-// Called every time a message comes in
-async function onMessageHandler(target, context, msg, self) {
-  // enable this is you also want the bot to listen to commands
-  //
-  // Ignore messages from the bot
-  // if (self) {
-  //   return;
-  // }
-  //
-  // Remove whitespace from chat message
-  // const commandName = msg.trim();
-}
 
 // Called every time the bot connects to Twitch chat
 function onConnectedHandler(addr, port) {
@@ -78,25 +68,32 @@ async function pingStreamUp() {
       },
       (err, res) => {
         if (res) {
+          if (!res.streams.length > 0) {
+            return;
+          }
+
           liveChannels = [];
 
-          for (let i of res.streams) {
-            const streamTime = Math.floor(new Date() - new Date(i.created_at));
+          for (let stream of res.streams) {
+            const streamTime = Math.floor(
+              new Date() - new Date(stream.created_at)
+            );
             const timeTilReminder = hourMs - (streamTime % hourMs);
             const hoursLive = Math.ceil(streamTime / hourMs);
+            const streamName = stream.channel.name;
 
-            liveChannels.push(i.channel.name);
+            liveChannels.push(streamName);
 
-            if (!msgQueue.includes(i.channel.name)) {
-              msgQueue.push(i.channel.name);
+            if (!msgQueue.includes(streamName)) {
+              msgQueue.push(streamName);
               console.log(
-                `Sending reminder to ${i.channel.name} in ${(
+                `Sending reminder to ${streamName} in ${(
                   timeTilReminder / 60000
                 ).toFixed(2)} min, ${hoursLive} hour live`
               );
 
               setTimeout(() => {
-                sendReminder(i.channel.name, hoursLive);
+                sendReminder(streamName, hoursLive);
               }, timeTilReminder);
             }
           }
@@ -119,7 +116,7 @@ function sendReminder(userName, hours) {
   }
 
   if (liveChannels.includes(userName)) {
-    // Calculate hours and water amount
+    // calculate hours and water amount
     let water = hours * 120;
 
     hours = `${hours} ${hours == 1 ? 'hour' : 'hours'}`;
