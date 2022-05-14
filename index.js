@@ -1,6 +1,6 @@
-require('dotenv').config();
-const tmi = require('tmi.js');
-const fetch = require('node-fetch');
+import 'dotenv/config';
+import tmi from 'tmi.js';
+import fetch from 'node-fetch';
 
 const { CLIENT_ID, CLIENT_SECRET, CHANNELS, TW_OAUTH, USERNAME } = process.env;
 
@@ -11,29 +11,26 @@ let liveChannels = [];
 let msgQueue = [];
 const hourMs = 60000 * 60; // ms in a hour
 
-// Define configuration options
-const opts = {
+// Define tmi configuration options
+const options = {
   identity: {
     username: USERNAME,
     password: TW_OAUTH,
   },
   channels: usernames,
 };
-// Create a client with our options
-const client = new tmi.client(opts);
+// Create a tmi client with our options
+const client = new tmi.client(options);
 
-// Register our event handlers (defined below)
-client.on('connected', onConnectedHandler);
+// Called every time the bot connects to Twitch chat
+client.on('connected', (addr, port) => {
+  console.log(`Connected to ${addr}:${port}`);
+});
 
 // Connect to Twitch
 client.connect();
 
-// Called every time the bot connects to Twitch chat
-function onConnectedHandler(addr, port) {
-  console.log(`Connected to ${addr}:${port}`);
-}
-
-// ping all streams
+// Check which streams are currently live
 async function pingStreamUp() {
   try {
     const token = await getAccessToken();
@@ -49,7 +46,7 @@ async function pingStreamUp() {
     const json = await res.json();
     const channels = json.data;
 
-    if (channels.length < 0) {
+    if (channels.length < 1) {
       return; // no channels live
     }
 
@@ -77,6 +74,7 @@ async function pingStreamUp() {
   }
 }
 
+// Send hydration reminder to streamer
 function sendReminder(username, hours) {
   // remove from message queue
   const index = msgQueue.indexOf(username);
@@ -100,11 +98,10 @@ function sendReminder(username, hours) {
   }
 }
 
-// main code loop
-pingStreamUp();
+pingStreamUp(); // See which streams are live
 setInterval(() => {
   pingStreamUp();
-}, 5 * 60000); // 5 minutes
+}, 5 * 60000); // Contignue check which streams are live every 5 minutes
 
 async function getAccessToken() {
   const url = `https://id.twitch.tv/oauth2/token?client_id=${CLIENT_ID}&client_secret=${CLIENT_SECRET}&grant_type=client_credentials`;
