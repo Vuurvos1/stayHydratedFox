@@ -1,19 +1,23 @@
 {
   "name": "stayhydratedtwitchbot",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "A Twitch bot that helps you to maintain optimal hydration",
   "main": "index.js",
+  "type": "module",
   "dependencies": {
-    "dotenv": "^16.0.0",
-    "node-fetch": "^2.6.7",
+    "dotenv": "^16.0.1",
+    "node-fetch": "^3.2.4",
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
-    "nodemon": "^2.0.15"
+    "nodemon": "^2.0.16"
   },
   "scripts": {
     "start": "node index.js",
     "dev": "npx nodemon index.js"
+  },
+  "engines": {
+    "node": ">=16.0.0"
   },
   "repository": {
     "type": "git",
