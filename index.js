@@ -53,11 +53,13 @@ async function pingStreamUp() {
     liveChannels = [];
     for (const stream of channels) {
       const { started_at, user_name } = stream;
-      const streamTime = Math.floor(new Date() - new Date(started_at));
-      const timeTilReminder = HOUR - (streamTime % HOUR);
-      const hoursLive = Math.ceil(streamTime / HOUR);
       liveChannels.push(user_name);
+
       if (!msgQueue.includes(user_name)) {
+        const streamTime = new Date() - new Date(started_at);
+        const timeTilReminder = HOUR - (streamTime % HOUR);
+        const hoursLive = Math.ceil(streamTime / HOUR);
+
         msgQueue.push(user_name);
 
         setTimeout(() => {
