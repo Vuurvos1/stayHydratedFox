@@ -5,12 +5,12 @@
   "main": "index.js",
   "type": "module",
   "dependencies": {
-    "dotenv": "^16.0.1",
-    "node-fetch": "^3.2.4",
+    "dotenv": "^16.0.3",
+    "node-fetch": "^3.2.10",
     "tmi.js": "^1.8.5"
   },
   "devDependencies": {
-    "nodemon": "^2.0.16"
+    "nodemon": "^2.0.20"
   },
   "scripts": {
     "start": "node index.js",
