@@ -23,8 +23,11 @@ type Stream struct {
 const MINUTE = 60 * time.Second
 const HOUR = 60 * MINUTE
 
+var client *twitch.Client
+
 // var liveChannels = make(map[string]bool))
 var liveChannels map[string]bool
+var messageQueue map[string]bool
 
 func main() {
 	fmt.Println("Hello, World!")
@@ -53,17 +56,22 @@ func main() {
 	usernames := strings.Split(envs["CHANNELS"], ",")
 	userQuery := "user_login=" + strings.Join(usernames, "&user_login=")
 
-	// liveChannels := map[string]bool{}
-	// messageQueue := map[string]bool{}
-
 	// Create a new client instance
-	client := twitch.NewClient(envs["USERNAME"], envs["TW_OAUTH"])
+	client = twitch.NewClient(envs["USERNAME"], envs["TW_OAUTH"])
 
 	token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
 	fmt.Println(token)
 
-	channels := pingStreams(userQuery, envs["CLIENT_ID"], token)
+	channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
 	fmt.Println(channels)
+
+	time.AfterFunc(5*time.Second, func() {
+		// do stuff after 5 seconds
+
+		if channels["channel"] {
+			fmt.Println("channel is live")
+		}
+	})
 
 	ticker := time.NewTicker(5 * MINUTE)
 	quit := make(chan struct{})
@@ -73,6 +81,33 @@ func main() {
 			case <-ticker.C:
 				// looping logic
 				fmt.Println("tick")
+
+				// fetch and set streams
+				token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
+				fetchStreams(userQuery, envs["CLIENT_ID"], token)
+
+				liveChannels = make(map[string]bool)
+
+				for channel, _ := range liveChannels {
+					liveChannels[channel] = true
+
+					if messageQueue[channel] {
+						continue // skip if already in queue
+					}
+
+					// send reminders
+					// const streamTime = time.Since(time.Now());
+					// get stream time
+					// get time till reminder
+					// get hours live
+
+					messageQueue[channel] = true
+
+					time.AfterFunc(5*time.Second, func() {
+						// do stuff after 5 seconds
+						sendReminder(channel, 5)
+					})
+				}
 
 			case <-quit:
 				ticker.Stop()
@@ -88,7 +123,7 @@ func main() {
 	}
 }
 
-func pingStreams(users string, clientId string, token string) map[string]bool {
+func fetchStreams(users string, clientId string, token string) map[string]bool {
 	fmt.Println(users)
 
 	req, err := http.NewRequest("GET", "https://api.twitch.tv/helix/streams?"+users, nil)
@@ -140,8 +175,16 @@ func pingStreams(users string, clientId string, token string) map[string]bool {
 	return liveChannels
 }
 
-func sendReminder() {
-	// client.Say("Firefox__", "Hello, World!")
+func sendReminder(channel string, hoursLive int) {
+	delete(messageQueue, channel) // remove channel from liveChannels
+
+	if _, ok := liveChannels[channel]; !ok {
+		return
+	}
+
+	// create message
+
+	// client.Say(channel, "You have been live for: " + hoursLive)
 }
 
 func getAccessToken(clientId string, clientSecret string) string {
