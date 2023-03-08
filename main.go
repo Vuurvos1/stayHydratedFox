@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 
@@ -25,13 +27,10 @@ const HOUR = 60 * MINUTE
 
 var client *twitch.Client
 
-// var liveChannels = make(map[string]bool))
-var liveChannels map[string]bool
-var messageQueue map[string]bool
+var liveChannels = make(map[string]bool)
+var messageQueue = make(map[string]bool)
 
 func main() {
-	fmt.Println("Hello, World!")
-
 	var envs map[string]string
 	envs, err := godotenv.Read(".env")
 	godotenv.Load(".env")
@@ -59,20 +58,6 @@ func main() {
 	// Create a new client instance
 	client = twitch.NewClient(envs["USERNAME"], envs["TW_OAUTH"])
 
-	token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
-	fmt.Println(token)
-
-	channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
-	fmt.Println(channels)
-
-	time.AfterFunc(5*time.Second, func() {
-		// do stuff after 5 seconds
-
-		if channels["channel"] {
-			fmt.Println("channel is live")
-		}
-	})
-
 	ticker := time.NewTicker(5 * MINUTE)
 	quit := make(chan struct{})
 	go func() {
@@ -80,32 +65,32 @@ func main() {
 			select {
 			case <-ticker.C:
 				// looping logic
-				fmt.Println("tick")
 
 				// fetch and set streams
 				token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
-				fetchStreams(userQuery, envs["CLIENT_ID"], token)
+				channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
 
 				liveChannels = make(map[string]bool)
+				for _, channel := range channels {
+					liveChannels[channel.UserName] = true
 
-				for channel, _ := range liveChannels {
-					liveChannels[channel] = true
-
-					if messageQueue[channel] {
+					if messageQueue[channel.UserName] {
 						continue // skip if already in queue
 					}
 
-					// send reminders
-					// const streamTime = time.Since(time.Now());
-					// get stream time
-					// get time till reminder
-					// get hours live
+					t, err := time.Parse(time.RFC3339, channel.StartedAt)
+					if err != nil {
+						fmt.Println("Error parsing time", err)
+					}
 
-					messageQueue[channel] = true
+					streamTime := time.Since(t)
+					timeTilReminder := HOUR - (streamTime % HOUR)
+					hoursLive := math.Ceil(streamTime.Hours())
 
-					time.AfterFunc(5*time.Second, func() {
-						// do stuff after 5 seconds
-						sendReminder(channel, 5)
+					messageQueue[channel.UserName] = true
+
+					time.AfterFunc(timeTilReminder, func() {
+						sendReminder(channel.UserName, int(hoursLive))
 					})
 				}
 
@@ -123,15 +108,12 @@ func main() {
 	}
 }
 
-func fetchStreams(users string, clientId string, token string) map[string]bool {
-	fmt.Println(users)
-
+func fetchStreams(users string, clientId string, token string) []Stream {
 	req, err := http.NewRequest("GET", "https://api.twitch.tv/helix/streams?"+users, nil)
 	req.Header.Set("Client-ID", clientId)
 	req.Header.Set("Authorization", "Bearer "+token)
 
 	resp, err := http.DefaultClient.Do(req)
-
 	if err != nil {
 		fmt.Println("Error fetching streams token", err)
 	}
@@ -142,7 +124,6 @@ func fetchStreams(users string, clientId string, token string) map[string]bool {
 	body, _ := ioutil.ReadAll(resp.Body)
 	fmt.Println(string(body))
 
-	// TODO: add better typing
 	type Data struct {
 		Data []Stream `json:"data"`
 	}
@@ -150,7 +131,6 @@ func fetchStreams(users string, clientId string, token string) map[string]bool {
 	data := Data{}
 
 	err = json.Unmarshal(body, &data)
-
 	if err != nil {
 		fmt.Println("Error unmarshalling json", err)
 	}
@@ -159,20 +139,12 @@ func fetchStreams(users string, clientId string, token string) map[string]bool {
 	json.NewDecoder(resp.Body).Decode(&res)
 
 	for _, channel := range data.Data {
-		fmt.Println(channel)
 		liveChannels[channel.UserName] = true
-
-		date, err := time.Parse(time.RFC3339, channel.StartedAt)
-		if err != nil {
-			fmt.Println("Error parsing time", err)
-		}
-
-		fmt.Println("Hours live:", time.Since(date))
 	}
 
 	fmt.Println(liveChannels)
 
-	return liveChannels
+	return data.Data
 }
 
 func sendReminder(channel string, hoursLive int) {
@@ -182,9 +154,26 @@ func sendReminder(channel string, hoursLive int) {
 		return
 	}
 
-	// create message
+	water := hoursLive * 120
 
-	// client.Say(channel, "You have been live for: " + hoursLive)
+	var waterText string
+	if water >= 1000 {
+		waterText = fmt.Sprintf("%.1f L", float32(water)/1000) // could be a float 32
+	} else {
+		waterText = strconv.Itoa(water) + " mL"
+	}
+
+	var hourString string
+	if hoursLive == 1 {
+		hourString = "hour"
+	} else {
+		hourString = "hours"
+	}
+
+	message := "You have been live for " + strconv.Itoa(hoursLive) + " " + hourString + " and should have consumed at least " + waterText + " of water to maintain optimal hydration! 💦"
+	fmt.Println("Send reminder to " + channel + " for " + strconv.Itoa(hoursLive) + " hour(s) live")
+
+	client.Say(channel, message)
 }
 
 func getAccessToken(clientId string, clientSecret string) string {
