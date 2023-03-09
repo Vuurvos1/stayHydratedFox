@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"math"
 	"net/http"
@@ -15,6 +14,14 @@ import (
 	"github.com/gempir/go-twitch-irc/v2"
 	"github.com/joho/godotenv"
 )
+
+type TokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+type StreamsResponse struct {
+	Data []Stream `json:"data"`
+}
 
 type Stream struct {
 	UserID    string `json:"user_id"`
@@ -118,31 +125,18 @@ func fetchStreams(users string, clientId string, token string) []Stream {
 		fmt.Println("Error fetching streams token", err)
 	}
 
-	liveChannels = make(map[string]bool)
+	defer resp.Body.Close()
 
-	// print body as stirng
-	body, _ := ioutil.ReadAll(resp.Body)
-	fmt.Println(string(body))
-
-	type Data struct {
-		Data []Stream `json:"data"`
-	}
-
-	data := Data{}
-
-	err = json.Unmarshal(body, &data)
+	data := StreamsResponse{}
+	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
 		fmt.Println("Error unmarshalling json", err)
 	}
 
-	var res map[string]interface{}
-	json.NewDecoder(resp.Body).Decode(&res)
-
+	liveChannels = make(map[string]bool)
 	for _, channel := range data.Data {
 		liveChannels[channel.UserName] = true
 	}
-
-	fmt.Println(liveChannels)
 
 	return data.Data
 }
@@ -158,7 +152,7 @@ func sendReminder(channel string, hoursLive int) {
 
 	var waterText string
 	if water >= 1000 {
-		waterText = fmt.Sprintf("%.1f L", float32(water)/1000) // could be a float 32
+		waterText = fmt.Sprintf("%.1f L", float32(water)/1000)
 	} else {
 		waterText = strconv.Itoa(water) + " mL"
 	}
@@ -190,10 +184,9 @@ func getAccessToken(clientId string, clientSecret string) string {
 		fmt.Println("Error fetching getting access token", err)
 	}
 
-	// TODO: add better typing
 	// TODO: use expires in instead of always getting a new token
-	var res map[string]interface{}
+	res := TokenResponse{}
 	json.NewDecoder(resp.Body).Decode(&res)
 
-	return res["access_token"].(string)
+	return res.AccessToken
 }
