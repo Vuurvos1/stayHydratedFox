@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -87,7 +86,7 @@ func main() {
 
 					t, err := time.Parse(time.RFC3339, channel.StartedAt)
 					if err != nil {
-						fmt.Println("Error parsing time", err)
+						log.Panic("Error parsing time", err)
 					}
 
 					streamTime := time.Since(t)
@@ -108,6 +107,10 @@ func main() {
 		}
 	}()
 
+	client.OnConnect(func() {
+		log.Println("Successfully connected to Twitch!")
+	})
+
 	// Connect to the Twitch IRC
 	err = client.Connect()
 	if err != nil {
@@ -122,7 +125,7 @@ func fetchStreams(users string, clientId string, token string) []Stream {
 
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println("Error fetching streams token", err)
+		log.Panic("Error fetching streams token", err)
 	}
 
 	defer resp.Body.Close()
@@ -130,7 +133,7 @@ func fetchStreams(users string, clientId string, token string) []Stream {
 	data := StreamsResponse{}
 	err = json.NewDecoder(resp.Body).Decode(&data)
 	if err != nil {
-		fmt.Println("Error unmarshalling json", err)
+		log.Panic("Error unmarshalling json", err)
 	}
 
 	liveChannels = make(map[string]bool)
@@ -152,7 +155,7 @@ func sendReminder(channel string, hoursLive int) {
 
 	var waterText string
 	if water >= 1000 {
-		waterText = fmt.Sprintf("%.1f L", float32(water)/1000)
+		waterText = strconv.FormatFloat(float64(water)/1000, 'f', 1, 64) + " L"
 	} else {
 		waterText = strconv.Itoa(water) + " mL"
 	}
@@ -165,7 +168,7 @@ func sendReminder(channel string, hoursLive int) {
 	}
 
 	message := "You have been live for " + strconv.Itoa(hoursLive) + " " + hourString + " and should have consumed at least " + waterText + " of water to maintain optimal hydration! 💦"
-	fmt.Println("Send reminder to " + channel + " for " + strconv.Itoa(hoursLive) + " hour(s) live")
+	log.Println("Send reminder to " + channel + " for " + strconv.Itoa(hoursLive) + " hour(s) live")
 
 	client.Say(channel, message)
 }
@@ -177,11 +180,9 @@ func getAccessToken(clientId string, clientSecret string) string {
 		"grant_type":    {"client_credentials"},
 	}
 
-	url := "https://id.twitch.tv/oauth2/token"
-	resp, err := http.PostForm(url, data)
-
+	resp, err := http.PostForm("https://id.twitch.tv/oauth2/token", data)
 	if err != nil {
-		fmt.Println("Error fetching getting access token", err)
+		log.Panic("Error fetching getting access token", err)
 	}
 
 	// TODO: use expires in instead of always getting a new token
