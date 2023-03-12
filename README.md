@@ -1,4 +1,6 @@
-# Stay Hydrated Twitch Bot
+<img align="right" height="100" src="./assets/readmeBottle.png">
+
+# Stay Hydrated Bot
 
 A Twitch bot that helps you to stay hydrated while streaming, written in Go
 
@@ -7,7 +9,7 @@ Assuming the average human is awake for 16 hours a day and needs to consume appr
 
 ## 🔩 Installing the project
 
-First make sure you have [Golang](https://go.dev/) installed on your system.
+First make sure you have [Go](https://go.dev/) installed on your system.
 
 1. Clone the project to your local environment
 2. Go to the folder where you saved the project in the terminal
