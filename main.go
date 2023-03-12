@@ -69,9 +69,8 @@ func main() {
 	go func() {
 		for {
 			select {
+			// looping logic
 			case <-ticker.C:
-				// looping logic
-
 				// fetch and set streams
 				token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
 				channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
@@ -168,7 +167,7 @@ func sendReminder(channel string, hoursLive int) {
 	}
 
 	message := "You have been live for " + strconv.Itoa(hoursLive) + " " + hourString + " and should have consumed at least " + waterText + " of water to maintain optimal hydration! 💦"
-	log.Println("Send reminder to " + channel + " for " + strconv.Itoa(hoursLive) + " hour(s) live")
+	log.Println("Send reminder to " + channel + ", " + strconv.Itoa(hoursLive) + " hour(s) live")
 
 	client.Say(channel, message)
 }
