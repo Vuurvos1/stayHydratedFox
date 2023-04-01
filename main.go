@@ -16,6 +16,8 @@ import (
 
 type TokenResponse struct {
 	AccessToken string `json:"access_token"`
+	ExpiresIn   int    `json:"expires_in"`
+	TokenType   string `json:"token_type"`
 }
 
 type StreamsResponse struct {
@@ -33,7 +35,7 @@ const HOUR = 60 * MINUTE
 
 var client *twitch.Client
 
-var liveChannels = make(map[string]bool)
+var liveChannels = make(map[string]time.Time)
 var messageQueue = make(map[string]bool)
 
 func main() {
@@ -75,20 +77,37 @@ func main() {
 				token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
 				channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
 
-				liveChannels = make(map[string]bool)
+				// for every item in livechannels, check if it's still live
+				for channel, _ := range liveChannels {
+					found := false
+					for _, stream := range channels {
+						if stream.UserName == channel {
+							found = true
+							break
+						}
+					}
+
+					if !found {
+						delete(liveChannels, channel)
+					}
+				}
+
+				// liveChannels = make(map[string]bool)
 				for _, channel := range channels {
-					liveChannels[channel.UserName] = true
+					if _, ok := liveChannels[channel.UserName]; !ok {
+						t, err := time.Parse(time.RFC3339, channel.StartedAt)
+						if err != nil {
+							log.Panic("Error parsing time", err)
+						}
+						liveChannels[channel.UserName] = t
+					}
+
+					streamTime := time.Since(liveChannels[channel.UserName])
 
 					if messageQueue[channel.UserName] {
 						continue // skip if already in queue
 					}
 
-					t, err := time.Parse(time.RFC3339, channel.StartedAt)
-					if err != nil {
-						log.Panic("Error parsing time", err)
-					}
-
-					streamTime := time.Since(t)
 					timeTilReminder := HOUR - (streamTime % HOUR)
 					hoursLive := math.Ceil(streamTime.Hours())
 
@@ -135,11 +154,6 @@ func fetchStreams(users string, clientId string, token string) []Stream {
 		log.Panic("Error unmarshalling json", err)
 	}
 
-	liveChannels = make(map[string]bool)
-	for _, channel := range data.Data {
-		liveChannels[channel.UserName] = true
-	}
-
 	return data.Data
 }
 
@@ -147,7 +161,7 @@ func sendReminder(channel string, hoursLive int) {
 	delete(messageQueue, channel) // remove channel from liveChannels
 
 	if _, ok := liveChannels[channel]; !ok {
-		return
+		return // skip if not live
 	}
 
 	water := hoursLive * 120
@@ -172,7 +186,14 @@ func sendReminder(channel string, hoursLive int) {
 	client.Say(channel, message)
 }
 
+// TODO: use expires in instead of always getting a new token
+
+var tokenResponse = TokenResponse{}
+var tokenExpires time.Time
+
 func getAccessToken(clientId string, clientSecret string) string {
+	// if tokenResponse
+
 	data := url.Values{
 		"client_id":     {clientId},
 		"client_secret": {clientSecret},
@@ -184,9 +205,21 @@ func getAccessToken(clientId string, clientSecret string) string {
 		log.Panic("Error fetching getting access token", err)
 	}
 
-	// TODO: use expires in instead of always getting a new token
 	res := TokenResponse{}
 	json.NewDecoder(resp.Body).Decode(&res)
 
+	tokenExpires = time.Now().Add(time.Duration(res.ExpiresIn) * time.Second)
+
 	return res.AccessToken
 }
+
+// func filterStreams(streams []Stream, filter func(Stream) bool) []Stream {
+// 	var filtered []Stream
+// 	for _, stream := range streams {
+// 		if filter(stream) {
+// 			filtered = append(filtered, stream)
+// 		}
+// 	}
+
+// 	return filtered
+// }

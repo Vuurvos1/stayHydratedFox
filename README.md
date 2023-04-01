@@ -15,7 +15,7 @@ First make sure you have [Go](https://go.dev/) installed on your system.
 2. Go to the folder where you saved the project in the terminal
 3. Run `go mod tidy` to install the needed Go packages
 4. Create a `.env` file using the `.env.example` template
-5. Start the project using `go run main.go`
+5. Start the bot using `go run .`
 6. Your hydration bot should now be up and running 💦!
 
 ## 📰 License
