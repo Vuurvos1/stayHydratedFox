@@ -38,6 +38,8 @@ var client *twitch.Client
 var liveChannels = make(map[string]time.Time)
 var messageQueue = make(map[string]bool)
 
+var accessToken = ""
+
 func main() {
 	var envs map[string]string
 	envs, err := godotenv.Read(".env")
@@ -74,8 +76,7 @@ func main() {
 			// looping logic
 			case <-ticker.C:
 				// fetch and set streams
-				token := getAccessToken(envs["CLIENT_ID"], envs["CLIENT_SECRET"])
-				channels := fetchStreams(userQuery, envs["CLIENT_ID"], token)
+				channels := fetchStreams(userQuery, envs["CLIENT_ID"], envs["CLIENT_SECRET"])
 
 				// for every item in livechannels, check if it's still live
 				for channel, _ := range liveChannels {
@@ -136,12 +137,20 @@ func main() {
 	}
 }
 
-func fetchStreams(users string, clientId string, token string) []Stream {
+func fetchStreams(users string, clientId string, clientSecret string) []Stream {
 	req, err := http.NewRequest("GET", "https://api.twitch.tv/helix/streams?"+users, nil)
 	req.Header.Set("Client-ID", clientId)
-	req.Header.Set("Authorization", "Bearer "+token)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
 
 	resp, err := http.DefaultClient.Do(req)
+
+	// if 401 Unauthorized, get new token and try again
+	if resp.StatusCode == 401 {
+		accessToken = getAccessToken(clientId, clientSecret)
+		req.Header.Set("Authorization", "Bearer "+accessToken)
+		resp, err = http.DefaultClient.Do(req)
+	}
+
 	if err != nil {
 		log.Panic("Error fetching streams token", err)
 	}
@@ -186,13 +195,8 @@ func sendReminder(channel string, hoursLive int) {
 	client.Say(channel, message)
 }
 
-// TODO: use expires in instead of always getting a new token
-
-var tokenResponse = TokenResponse{}
-var tokenExpires time.Time
-
 func getAccessToken(clientId string, clientSecret string) string {
-	// if tokenResponse
+	log.Println("Getting new access token")
 
 	data := url.Values{
 		"client_id":     {clientId},
@@ -208,18 +212,5 @@ func getAccessToken(clientId string, clientSecret string) string {
 	res := TokenResponse{}
 	json.NewDecoder(resp.Body).Decode(&res)
 
-	tokenExpires = time.Now().Add(time.Duration(res.ExpiresIn) * time.Second)
-
 	return res.AccessToken
 }
-
-// func filterStreams(streams []Stream, filter func(Stream) bool) []Stream {
-// 	var filtered []Stream
-// 	for _, stream := range streams {
-// 		if filter(stream) {
-// 			filtered = append(filtered, stream)
-// 		}
-// 	}
-
-// 	return filtered
-// }
