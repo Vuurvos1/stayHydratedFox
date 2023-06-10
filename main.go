@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -97,6 +98,7 @@ func main() {
 					hoursLive := math.Ceil(streamTime.Hours())
 
 					messageQueue[channel.UserName] = true
+					fmt.Println("Set reminder for " + channel.UserName + " in " + timeTilReminder.String())
 
 					time.AfterFunc(timeTilReminder, func() {
 						sendReminder(channel.UserName, int(hoursLive))
@@ -155,6 +157,12 @@ func sendReminder(channel string, hoursLive int) {
 
 	if _, ok := liveChannels[channel]; !ok {
 		return // skip if not live
+	}
+
+	// doulbe check if time is right, and within 1 minute
+	if (time.Since(liveChannels[channel]) % HOUR) > MINUTE {
+		fmt.Println("Skip reminder for " + channel + ", not within 1 minute of hour")
+		return
 	}
 
 	water := hoursLive * 120
